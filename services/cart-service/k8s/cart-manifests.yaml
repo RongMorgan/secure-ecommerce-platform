@@ -55,13 +55,35 @@ spec:
       containers:
       - name: cart-service
         image: node:18-slim
-        # This tells the container to stay alive, write the code, and run it
+        workingDir: /app
         command: ["/bin/sh", "-c"]
         args: 
           - |
-            echo 'const express = require("express"); const Redis = require("ioredis"); const app = express(); const redis = new Redis({ host: process.env.REDIS_HOST }); app.get("/health", (req, res) => res.json({ status: "healthy", service: "cart" })); app.listen(8080, () => console.log("Cart Service is listening on port 8080"));' > index.js;
-            npm install express ioredis;
+            # 1. Setup clean environment
+            mkdir -p /app && cd /app
+            rm -rf node_modules package-lock.json
+            
+            # 2. Write the application code
+            echo 'const express = require("express"); 
+            const Redis = require("ioredis"); 
+            const app = express(); 
+            const redis = new Redis({ host: process.env.REDIS_HOST || "cart-redis", port: 6379 }); 
+            
+            app.get("/health", (req, res) => res.json({ status: "healthy", service: "cart" }));
+            
+            app.listen(8080, () => {
+              console.log("--------------------------");
+              console.log("Cart Service is LIVE on 8080");
+              console.log("--------------------------");
+            });' > index.js;
+            
+            # 3. Install dependencies without lockfile conflicts
+            npm install express ioredis --no-package-lock
+            
+            # 4. Start the service
             node index.js
         env:
         - name: REDIS_HOST
           value: "cart-redis"
+        ports:
+        - containerPort: 8080
