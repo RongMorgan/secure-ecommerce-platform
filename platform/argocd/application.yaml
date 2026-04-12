@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: git@github.com:RongMorgan/secure-ecommerce-platform.git
     targetRevision: HEAD
-    path: services
+    path: services/product-service/k8s
   destination:
     server: https://kubernetes.default.svc
     namespace: ecommerce
