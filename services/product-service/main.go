@@ -23,7 +23,7 @@ var db *gorm.DB
 func main() {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		dsn = "host=localhost user=postgres password=postgres dbname=products port=5432 sslmode=disable"
+		dsn = "host=postgres user=postgres password=postgres dbname=products port=5432 sslmode=disable"
 	}
 	
 	var err error
