@@ -1,6 +1,29 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: frontend-config
+  namespace: ecommerce
+data:
+  default.conf: |
+    server {
+        listen 80;
+        location / {
+            root /usr/share/nginx/html;
+            index index.html;
+        }
+        # Forward product requests to the Product Service
+        location /api/products {
+            proxy_pass http://product-service:8080;
+        }
+        # Forward cart requests to the Cart Service
+        location /api/cart {
+            proxy_pass http://cart-service:8080;
+        }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: frontend-html
   namespace: ecommerce
 data:
@@ -9,24 +32,77 @@ data:
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Secure Ecommerce Platform</title>
+        <title>Secure Shop | Live Dashboard</title>
         <style>
-            body { background-color: #0d1117; color: #c9d1d9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-            .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
-            h1 { color: #58a6ff; margin-bottom: 10px; }
-            .status-box { background: #21262d; padding: 15px; border-radius: 6px; margin-top: 20px; border-left: 4px solid #238636; }
-            .badge { color: #238636; font-weight: bold; }
+            body { background: #0d1117; color: #c9d1d9; font-family: sans-serif; padding: 40px; }
+            .container { max-width: 900px; margin: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            .card { background: #161b22; border: 1px solid #30363d; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+            h2 { color: #58a6ff; border-bottom: 1px solid #30363d; padding-bottom: 10px; }
+            input { width: 100%; padding: 10px; margin: 10px 0; background: #0d1117; border: 1px solid #30363d; color: white; border-radius: 5px; }
+            button { width: 100%; padding: 10px; background: #238636; border: none; color: white; border-radius: 5px; cursor: pointer; font-weight: bold; }
+            button:hover { background: #2ea043; }
+            .item-list { margin-top: 20px; list-style: none; padding: 0; }
+            .item-list li { background: #21262d; padding: 10px; margin-bottom: 5px; border-radius: 4px; display: flex; justify-content: space-between; }
         </style>
     </head>
     <body>
-        <div class="card">
-            <h1>Secure Ecommerce Platform</h1>
-            <p>Welcome, Measchamrong. Your cluster is online.</p>
-            <div class="status-box">
-                <p>Status: <span class="badge">SYSTEMS OPERATIONAL</span></p>
-                <small>Connected to Kubernetes (k3d)</small>
+        <h1 style="text-align:center;">🛒 Secure Ecommerce Platform</h1>
+        <div class="container">
+            <div class="card">
+                <h2>Product Catalog</h2>
+                <input type="text" id="pName" placeholder="Product Name">
+                <input type="number" id="pPrice" placeholder="Price ($)">
+                <button onclick="addProduct()">Add Product to DB</button>
+                <ul id="productList" class="item-list"></ul>
+            </div>
+            <div class="card">
+                <h2>Your Shopping Cart</h2>
+                <input type="text" id="cartItem" placeholder="Add item to session...">
+                <button onclick="addToCart()" style="background:#1f6feb;">Add to Cart</button>
+                <ul id="cartList" class="item-list"></ul>
             </div>
         </div>
+
+        <script>
+            async function addProduct() {
+                const name = document.getElementById('pName').value;
+                const price = document.getElementById('pPrice').value;
+                await fetch('/api/products', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ name, price })
+                });
+                loadProducts();
+            }
+
+            async function loadProducts() {
+                const res = await fetch('/api/products');
+                const data = await res.json();
+                const list = document.getElementById('productList');
+                list.innerHTML = data.map(p => `<li>${p.name} <span>$${p.price}</span></li>`).join('');
+            }
+
+            async function addToCart() {
+                const item = document.getElementById('cartItem').value;
+                await fetch('/api/cart', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ item })
+                });
+                loadCart();
+            }
+
+            async function loadCart() {
+                const res = await fetch('/api/cart');
+                const data = await res.json();
+                const list = document.getElementById('cartList');
+                list.innerHTML = data.items.map(i => `<li>${i}</li>`).join('');
+            }
+
+            // Load initial data
+            loadProducts();
+            loadCart();
+        </script>
     </body>
     </html>
 ---
@@ -36,7 +112,6 @@ metadata:
   name: frontend
   namespace: ecommerce
 spec:
-  replicas: 1
   selector:
     matchLabels:
       app: frontend
@@ -53,10 +128,16 @@ spec:
         volumeMounts:
         - name: html-volume
           mountPath: /usr/share/nginx/html
+        - name: config-volume
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
       volumes:
       - name: html-volume
         configMap:
           name: frontend-html
+      - name: config-volume
+        configMap:
+          name: frontend-config
 ---
 apiVersion: v1
 kind: Service
@@ -66,6 +147,5 @@ metadata:
 spec:
   ports:
   - port: 80
-    targetPort: 80
   selector:
     app: frontend
