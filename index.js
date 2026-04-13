@@ -1,0 +1,1 @@
+const express = require("express"); const Redis = require("ioredis"); const app = express(); const redis = new Redis({ host: process.env.REDIS_HOST }); app.get("/health", (req, res) => res.json({ status: "healthy", service: "cart" })); app.listen(8080, () => console.log("Cart Service is listening on port 8080"));
