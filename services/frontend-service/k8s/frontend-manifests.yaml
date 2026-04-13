@@ -1,29 +1,6 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: frontend-config
-  namespace: ecommerce
-data:
-  default.conf: |
-    server {
-        listen 80;
-        location / {
-            root /usr/share/nginx/html;
-            index index.html;
-        }
-        # Forward product requests to the Product Service
-        location /api/products {
-            proxy_pass http://product-service:8080;
-        }
-        # Forward cart requests to the Cart Service
-        location /api/cart {
-            proxy_pass http://cart-service:8080;
-        }
-    }
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
   name: frontend-html
   namespace: ecommerce
 data:
@@ -32,34 +9,65 @@ data:
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Secure Shop | Live Dashboard</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SECURE OS | Ecommerce v1.0</title>
+        <script src="https://cdn.tailwindcss.com"></script>
         <style>
-            body { background: #0d1117; color: #c9d1d9; font-family: sans-serif; padding: 40px; }
-            .container { max-width: 900px; margin: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-            .card { background: #161b22; border: 1px solid #30363d; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-            h2 { color: #58a6ff; border-bottom: 1px solid #30363d; padding-bottom: 10px; }
-            input { width: 100%; padding: 10px; margin: 10px 0; background: #0d1117; border: 1px solid #30363d; color: white; border-radius: 5px; }
-            button { width: 100%; padding: 10px; background: #238636; border: none; color: white; border-radius: 5px; cursor: pointer; font-weight: bold; }
-            button:hover { background: #2ea043; }
-            .item-list { margin-top: 20px; list-style: none; padding: 0; }
-            .item-list li { background: #21262d; padding: 10px; margin-bottom: 5px; border-radius: 4px; display: flex; justify-content: space-between; }
+            @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+            body { font-family: 'JetBrains Mono', monospace; background-color: #010409; }
+            .glass { background: rgba(22, 27, 34, 0.8); backdrop-filter: blur(10px); border: 1px solid #30363d; }
+            .glow-blue { box-shadow: 0 0 15px rgba(88, 166, 255, 0.3); }
         </style>
     </head>
-    <body>
-        <h1 style="text-align:center;">🛒 Secure Ecommerce Platform</h1>
-        <div class="container">
-            <div class="card">
-                <h2>Product Catalog</h2>
-                <input type="text" id="pName" placeholder="Product Name">
-                <input type="number" id="pPrice" placeholder="Price ($)">
-                <button onclick="addProduct()">Add Product to DB</button>
-                <ul id="productList" class="item-list"></ul>
-            </div>
-            <div class="card">
-                <h2>Your Shopping Cart</h2>
-                <input type="text" id="cartItem" placeholder="Add item to session...">
-                <button onclick="addToCart()" style="background:#1f6feb;">Add to Cart</button>
-                <ul id="cartList" class="item-list"></ul>
+    <body class="text-gray-300 p-8">
+        <div class="max-w-6xl mx-auto">
+            <header class="flex justify-between items-center mb-12 border-b border-gray-800 pb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-blue-400">SECURE_STORE.sh</h1>
+                    <p class="text-xs text-gray-500 mt-1">Status: <span class="text-green-500 font-bold">● CLUSTER_ACTIVE</span></p>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs uppercase tracking-widest text-gray-500">Authorized User</p>
+                    <p class="text-sm font-bold text-white">haisenberg@fedora</p>
+                </div>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="glass p-6 rounded-xl glow-blue">
+                    <h3 class="text-lg font-bold mb-4 text-white">System Commands</h3>
+                    <div class="space-y-4">
+                        <button onclick="loadProducts()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded font-bold transition">SCAN_DATABASE</button>
+                        <button onclick="loadCart()" class="w-full border border-gray-600 hover:bg-gray-800 text-white py-2 rounded font-bold transition">CHECK_SESSION</button>
+                    </div>
+                </div>
+
+                <div class="md:col-span-2 space-y-8">
+                    <div class="glass p-8 rounded-xl">
+                        <h2 class="text-xl font-bold mb-6 text-white italic">// Product_Ingestion_Unit</h2>
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <input type="text" id="pName" placeholder="Item Name" class="bg-gray-900 border border-gray-700 p-2 rounded focus:border-blue-500 outline-none">
+                            <input type="number" id="pPrice" placeholder="Unit Price ($)" class="bg-gray-900 border border-gray-700 p-2 rounded focus:border-blue-500 outline-none">
+                        </div>
+                        <button onclick="addProduct()" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold transition uppercase tracking-widest text-sm">Execute Post to Postgres</button>
+                    </div>
+
+                    <div class="glass p-8 rounded-xl">
+                        <h2 class="text-xl font-bold mb-6 text-white italic">// Live_Inventory_Logs</h2>
+                        <div class="overflow-hidden rounded-lg border border-gray-800">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-gray-800 text-gray-400">
+                                    <tr>
+                                        <th class="p-4 font-normal">UID</th>
+                                        <th class="p-4 font-normal">ITEM_NAME</th>
+                                        <th class="p-4 font-normal text-right">PRICE</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productTable">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -67,41 +75,33 @@ data:
             async function addProduct() {
                 const name = document.getElementById('pName').value;
                 const price = document.getElementById('pPrice').value;
+                if(!name || !price) return alert("Missing Data");
+                
                 await fetch('/api/products', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ name, price })
                 });
+                document.getElementById('pName').value = '';
+                document.getElementById('pPrice').value = '';
                 loadProducts();
             }
 
             async function loadProducts() {
                 const res = await fetch('/api/products');
                 const data = await res.json();
-                const list = document.getElementById('productList');
-                list.innerHTML = data.map(p => `<li>${p.name} <span>$${p.price}</span></li>`).join('');
+                const tbody = document.getElementById('productTable');
+                tbody.innerHTML = data.map((p, i) => `
+                    <tr class="border-t border-gray-800 hover:bg-gray-800/50">
+                        <td class="p-4 text-gray-500">0x0${i}</td>
+                        <td class="p-4 font-bold text-white">${p.name}</td>
+                        <td class="p-4 text-right text-green-400">$${p.price}</td>
+                    </tr>
+                `).join('');
             }
 
-            async function addToCart() {
-                const item = document.getElementById('cartItem').value;
-                await fetch('/api/cart', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ item })
-                });
-                loadCart();
-            }
-
-            async function loadCart() {
-                const res = await fetch('/api/cart');
-                const data = await res.json();
-                const list = document.getElementById('cartList');
-                list.innerHTML = data.items.map(i => `<li>${i}</li>`).join('');
-            }
-
-            // Load initial data
+            // Initial Scan
             loadProducts();
-            loadCart();
         </script>
     </body>
     </html>
@@ -138,14 +138,3 @@ spec:
       - name: config-volume
         configMap:
           name: frontend-config
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: frontend-service
-  namespace: ecommerce
-spec:
-  ports:
-  - port: 80
-  selector:
-    app: frontend
