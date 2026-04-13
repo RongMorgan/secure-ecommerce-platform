@@ -1,6 +1,27 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  name: frontend-config
+  namespace: ecommerce
+data:
+  default.conf: |
+    server {
+        listen 80;
+        location / {
+            root /usr/share/nginx/html;
+            index index.html;
+        }
+        location /api/products {
+            proxy_pass http://product-service:80/products;
+        }
+        location /api/chat {
+            proxy_pass http://chatbot-service:80/chat;
+        }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
   name: frontend-html
   namespace: ecommerce
 data:
@@ -14,28 +35,45 @@ data:
         <style>
             @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
             body { font-family: 'JetBrains Mono', monospace; background-color: #010409; color: #c9d1d9; }
-            .glass { background: rgba(22, 27, 34, 0.8); backdrop-filter: blur(10px); border: 1px solid #30363d; }
+            .glass { background: rgba(22, 27, 34, 0.8); border: 1px solid #30363d; }
+            .chat-box { height: 200px; overflow-y: auto; background: #0d1117; border: 1px solid #30363d; }
         </style>
     </head>
     <body class="p-8">
         <div class="max-w-6xl mx-auto">
             <h1 class="text-3xl font-bold text-blue-400 mb-8 border-b border-gray-800 pb-4">SECURE_STORE.sh</h1>
+            
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="glass p-8 rounded-xl">
-                    <h2 class="text-xl font-bold mb-6 text-white">// Ingestion_Unit</h2>
-                    <input type="text" id="pName" placeholder="Item Name" class="w-full bg-gray-900 border border-gray-700 p-2 mb-4 rounded text-white outline-none">
-                    <input type="number" id="pPrice" placeholder="Price" class="w-full bg-gray-900 border border-gray-700 p-2 mb-4 rounded text-white outline-none">
-                    <button onclick="addProduct()" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded font-bold uppercase tracking-widest">Execute Post</button>
-                    <p id="logStatus" class="mt-4 text-xs text-gray-500 italic">System: Ready</p>
+                <div class="space-y-8">
+                    <div class="glass p-6 rounded-xl">
+                        <h2 class="text-xl font-bold mb-4 text-white">// Ingestion_Unit</h2>
+                        <input type="text" id="pName" placeholder="Item Name" class="w-full bg-gray-900 border border-gray-700 p-2 mb-4 rounded text-white outline-none">
+                        <input type="number" id="pPrice" placeholder="Price" class="w-full bg-gray-900 border border-gray-700 p-2 mb-4 rounded text-white outline-none">
+                        <button onclick="addProduct()" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded font-bold uppercase">Execute Post</button>
+                        <p id="logStatus" class="mt-2 text-xs text-gray-500 italic">System: Ready</p>
+                    </div>
+                    
+                    <div class="glass p-6 rounded-xl">
+                        <h2 class="text-xl font-bold mb-4 text-white">// Live_Logs</h2>
+                        <table class="w-full text-left text-sm">
+                            <tbody id="productTable"></tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="glass p-8 rounded-xl">
-                    <h2 class="text-xl font-bold mb-6 text-white">// Live_Logs</h2>
-                    <table class="w-full text-left text-sm">
-                        <tbody id="productTable"></tbody>
-                    </table>
+
+                <div class="glass p-6 rounded-xl border-l-4 border-blue-500">
+                    <h2 class="text-xl font-bold mb-4 text-white">// AI_Assistant_Terminal</h2>
+                    <div id="chatBox" class="chat-box p-4 mb-4 rounded font-mono text-xs">
+                        <div class="text-blue-400">--- SYSTEM BOOT COMPLETE ---</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="chatInput" placeholder="Enter command..." class="flex-1 bg-gray-900 border border-gray-700 p-2 rounded text-white outline-none text-sm">
+                        <button onclick="sendChat()" class="bg-blue-600 px-4 py-2 rounded font-bold text-sm">SEND</button>
+                    </div>
                 </div>
             </div>
         </div>
+
         <script>
             async function loadProducts() {
                 const res = await fetch('/api/products');
@@ -44,6 +82,7 @@ data:
                     `<tr class="border-b border-gray-800"><td class="p-2 font-bold">${p.name}</td><td class="p-2 text-right text-green-400">$${p.price}</td></tr>`
                 ).join('');
             }
+
             async function addProduct() {
                 const name = document.getElementById('pName').value;
                 const price = document.getElementById('pPrice').value;
@@ -58,6 +97,26 @@ data:
                 document.getElementById('logStatus').innerText = "System: Success";
                 loadProducts();
             }
+
+            async function sendChat() {
+                const input = document.getElementById('chatInput');
+                const box = document.getElementById('chatBox');
+                const msg = input.value;
+                if(!msg) return;
+
+                box.innerHTML += `<div class="text-gray-500 mt-2">> ${msg}</div>`;
+                input.value = '';
+
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ message: msg })
+                });
+                const data = await res.json();
+                box.innerHTML += `<div class="text-green-400 mt-1">[BOT]: ${data.reply}</div>`;
+                box.scrollTop = box.scrollHeight;
+            }
+
             loadProducts();
         </script>
     </body>
